@@ -1,0 +1,1 @@
+/home/junior/Desktop/koching/CMakeFiles/koch.dir

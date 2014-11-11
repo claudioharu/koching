@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( koch )
+find_package( OpenCV REQUIRED )
+add_executable( koch main.cpp )
+target_link_libraries( koch ${OpenCV_LIBS} )
