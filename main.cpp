@@ -27,9 +27,8 @@ int main(int argc, char* argv[])
 	//the number of bags
 	int dictionarySize = 200;
 
-
 	char buf[255];
-	ifstream ifs("train/paths.txt");
+	ifstream ifs("trainpaths.txt");
 	
 	string trainPaths[22];
 	string testPaths[22];
@@ -51,7 +50,7 @@ int main(int argc, char* argv[])
 	}
 	ifs.close();
 
-	ifs.open("test/paths.txt");
+	ifs.open("testpaths.txt");
 	j = 0;
 	while(!ifs.eof())
 	{
@@ -59,7 +58,7 @@ int main(int argc, char* argv[])
 		string line(buf);
 		if (line.compare("") != 0)
 		{
-			line = line + "/";
+			// line = line + "/";
 			// istringstream iss(line);
 			testPaths[j] = line;
 			j++;
@@ -69,7 +68,7 @@ int main(int argc, char* argv[])
 	}
 	ifs.close();
 	
-	
+
 
 if (flag == 1)
 {
@@ -84,25 +83,18 @@ if (flag == 1)
 	dp = opendir( dir.c_str() );
 
 	// detecting keypoints
-	SiftFeatureDetector detector(500);
+	SurfFeatureDetector detector(1000);
 	vector<KeyPoint> keypoints;	
 
 	// computing descriptors
-	Ptr<DescriptorExtractor > extractor(new SiftDescriptorExtractor());//  extractor;
+	Ptr<DescriptorExtractor > extractor(new SurfDescriptorExtractor());//  extractor;
 	Mat descriptors;
 	Mat training_descriptors(1,extractor->descriptorSize(),extractor->descriptorType());
 	Mat img;
 
 	DIR* dp1;
 
-	//define Term Criteria
-	TermCriteria tc(CV_TERMCRIT_ITER,100,0.001);
-	//retries number
-	int retries=1;
-	//necessary flags
-	int flags=KMEANS_PP_CENTERS;
-	//Create the BoW (or BoF) trainer
-	BOWKMeansTrainer bowtrainer(dictionarySize,tc,retries,flags);
+	unsigned char isFile =0x8;
 
 	cout << "------- build vocabulary ---------\n";
 
@@ -118,25 +110,21 @@ if (flag == 1)
 
 		while (dirp1 = readdir( dp1 ))
 		{
-			if (dirp1->d_type != isFile) continue;
 
 			filepath = dir + dirp->d_name;
 			cout << filepath << endl;
 
 			imgpath = filepath + "/"+dirp1->d_name;
+			if (dirp1->d_type != isFile) continue;
 			
 			cout << imgpath << endl;
 
 			img = imread(imgpath);
-			if(img.data)
-			{
-				detector.detect(img, keypoints);
-
-				extractor->compute(img, keypoints, descriptors);
-				// bowtrainer.add(features);
-				// training_descriptors.push_back(descriptors);
-			}
+			detector.detect(img, keypoints);
+			extractor->compute(img, keypoints, descriptors);
 			
+			training_descriptors.push_back(descriptors);
+
 
 
 		}
@@ -149,9 +137,7 @@ if (flag == 1)
 
 	cout << "Total descriptors: " << training_descriptors.rows << endl;
 
-
-
-
+	BOWKMeansTrainer bowtrainer(200); //num clusters
 	bowtrainer.add(training_descriptors);
 	cout << "cluster BOW features" << endl;
 	dictionary = bowtrainer.cluster();
@@ -159,14 +145,13 @@ if (flag == 1)
 	FileStorage fs("dictionary.yml", FileStorage::WRITE);
 	fs << "vocabulary" << dictionary;
 	fs.release();
-	// bowtrainer.cluster();
 }
 else
 {
 	string dir = "train/", filepath, imgpath;
 	DIR *dp, *dp1;
 	struct dirent *dirp, *dirp1;
-	dp = opendir( dir.c_str() );
+	// dp = opendir( dir.c_str() );
 
 
     //prepare BOW descriptor extractor from the dictionary    
@@ -206,9 +191,11 @@ else
 
 	int count = 0;
 	short aux = 0;
-    while (dirp = readdir( dp ))
-	{
-		filepath = dir + dirp->d_name;
+ //    while (dirp = readdir( dp ))
+	// {
+	for(int i = 0; i < 21; i++){
+		filepath = trainPaths[i];
+		// filepath = dir + dirp->d_name;
 		// cout << filepath << endl;
 
 		dp1 = opendir( filepath.c_str() );
@@ -217,21 +204,20 @@ else
 		{
 			if (dirp1->d_type != isFile) continue;
 
-			filepath = dir + dirp->d_name;
+			// filepath = dir + dirp->d_name;
 			// cout << filepath << endl;
-			imgpath = filepath + "/"+dirp1->d_name;
+			imgpath = filepath + "/" +dirp1->d_name;
 			// cout << "img: " << imgpath << endl;
 
 			img = imread(imgpath);
 			if(img.data )                              // Check for invalid input
 			{
-					
 				// cout << "label: " << dirp->d_name << endl;
 			    detector.detect(img, keypoints);
 				bowide.compute(img, keypoints, bowDescriptor);
 				if(!bowDescriptor.empty() ){
 					aux = 1;
-					labels.push_back((float)count);
+					labels.push_back((float)i);
 					trainingData.push_back(bowDescriptor);
 				}
 				
@@ -249,7 +235,7 @@ else
 		
 	}  
 
-	closedir( dp );
+	// closedir( dp );
 
     
 	// cout << "count: " << count << endl;
@@ -286,10 +272,12 @@ else
 	dir = "test/";
 	aux = 0;
 
-	dp = opendir( dir.c_str() );
-    while (dirp = readdir( dp ))
-	{
-		filepath = dir + dirp->d_name;
+	// dp = opendir( dir.c_str() );
+ //    while (dirp = readdir( dp ))
+	// {
+	for(int i = 0; i < 21; i++){
+		filepath = testPaths[i];
+		// filepath = dir + dirp->d_name;
 		// cout << filepath << endl;
 
 		dp1 = opendir( filepath.c_str() );
@@ -298,9 +286,9 @@ else
 		{
 			if (dirp1->d_type != isFile) continue;
 
-			filepath = dir + dirp->d_name;
+			// filepath = testPaths[i] + dirp->d_name;
 			cout << filepath << endl;
-			imgpath = filepath + "/"+dirp1->d_name;
+			imgpath = filepath + "/" + dirp1->d_name;
 			cout << "img: " << imgpath << endl;
 
 			img2 = imread(imgpath);
@@ -313,11 +301,13 @@ else
 					cout << "galo" << endl;
 
 					evalData.push_back(bowDescriptor2);
-					groundTruth.push_back((float) count);
+					groundTruth.push_back((float) i);
 					float response = svm.predict(bowDescriptor2);
 					results.push_back(response);
 				}
 			}
+			    
+
 		}
 		if (aux == 1)
 		{
@@ -328,7 +318,7 @@ else
 		closedir(dp1);
 	} 
 
-	closedir( dp );
+	// closedir( dp );
 
 	cout << " evalData.rows: " <<  evalData.rows << endl;
 
@@ -342,4 +332,3 @@ else
 
 return 0;
 }
-
