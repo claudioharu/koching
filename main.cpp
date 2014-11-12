@@ -12,8 +12,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
-
 using namespace cv;
 using namespace std;
 
@@ -27,14 +25,14 @@ int main(int argc, char* argv[])
 	Mat dictionary;
 	//Construct BOWKMeansTrainer
 	//the number of bags
-	int dictionarySize=200;
+	int dictionarySize = 150;
 
 
 if (flag == 1)
 {
 	cout << argv[1] << "\n";
 
-	string dir = "TRAIN/", filepath, imgpath;
+	string dir = "train/", filepath, imgpath;
 	DIR *dp;
 
 	struct dirent *dirp, *dirp1;
@@ -43,17 +41,25 @@ if (flag == 1)
 	dp = opendir( dir.c_str() );
 
 	// detecting keypoints
-	SurfFeatureDetector detector(1000);
+	SiftFeatureDetector detector(500);
 	vector<KeyPoint> keypoints;	
 
 	// computing descriptors
-	Ptr<DescriptorExtractor > extractor(new SurfDescriptorExtractor());//  extractor;
+	Ptr<DescriptorExtractor > extractor(new SiftDescriptorExtractor());//  extractor;
 	Mat descriptors;
 	Mat training_descriptors(1,extractor->descriptorSize(),extractor->descriptorType());
 	Mat img;
 
 	DIR* dp1;
 
+	//define Term Criteria
+	TermCriteria tc(CV_TERMCRIT_ITER,100,0.001);
+	//retries number
+	int retries=1;
+	//necessary flags
+	int flags=KMEANS_PP_CENTERS;
+	//Create the BoW (or BoF) trainer
+	BOWKMeansTrainer bowtrainer(dictionarySize,tc,retries,flags);
 
 	cout << "------- build vocabulary ---------\n";
 
@@ -69,21 +75,25 @@ if (flag == 1)
 
 		while (dirp1 = readdir( dp1 ))
 		{
+			if (dirp1->d_type != isFile) continue;
 
 			filepath = dir + dirp->d_name;
 			cout << filepath << endl;
 
 			imgpath = filepath + "/"+dirp1->d_name;
-			if (dirp1->d_type != isFile) continue;
 			
 			cout << imgpath << endl;
 
 			img = imread(imgpath);
-			detector.detect(img, keypoints);
-			extractor->compute(img, keypoints, descriptors);
-			
-			training_descriptors.push_back(descriptors);
+			if(img.data)
+			{
+				detector.detect(img, keypoints);
 
+				extractor->compute(img, keypoints, descriptors);
+				// bowtrainer.add(features);
+				// training_descriptors.push_back(descriptors);
+			}
+			
 
 
 		}
@@ -98,14 +108,6 @@ if (flag == 1)
 
 
 
-	//define Term Criteria
-	TermCriteria tc(CV_TERMCRIT_ITER,100,0.001);
-	//retries number
-	int retries=1;
-	//necessary flags
-	int flags=KMEANS_PP_CENTERS;
-	//Create the BoW (or BoF) trainer
-	BOWKMeansTrainer bowtrainer(dictionarySize,tc,retries,flags);
 
 	bowtrainer.add(training_descriptors);
 	cout << "cluster BOW features" << endl;
@@ -118,7 +120,7 @@ if (flag == 1)
 }
 else
 {
-	string dir = "TRAIN/", filepath, imgpath;
+	string dir = "train/", filepath, imgpath;
 	DIR *dp, *dp1;
 	struct dirent *dirp, *dirp1;
 	dp = opendir( dir.c_str() );
@@ -133,9 +135,9 @@ else
     //create a nearest neighbor matcher
     Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
     //create Sift feature point extracter
-   SurfFeatureDetector detector(1000);
+  	SurfFeatureDetector detector(1000);
     //create Sift descriptor extractor
-    Ptr<DescriptorExtractor> extractor(new SurfDescriptorExtractor);  
+	Ptr<DescriptorExtractor > extractor(new SurfDescriptorExtractor());//  extractor;
 
 
     //To store the keypoints that will be extracted by SIFT
@@ -160,7 +162,7 @@ else
 	Mat trainingData(0, dictionarySize, CV_32FC1);
 
 	int count = 0;
-	int a = 0;
+	short aux = 0;
     while (dirp = readdir( dp ))
 	{
 		filepath = dir + dirp->d_name;
@@ -180,116 +182,123 @@ else
 			img = imread(imgpath);
 			if(img.data )                              // Check for invalid input
 			{
-				
+					
 				// cout << "label: " << dirp->d_name << endl;
-			    img = imread(imgpath);
-			    detector.detect(img,keypoints);
-				bowide.compute(img,keypoints,bowDescriptor);
+			    detector.detect(img, keypoints);
+				bowide.compute(img, keypoints, bowDescriptor);
+				if(!bowDescriptor.empty() ){
+					aux = 1;
+					labels.push_back((float)count);
+					trainingData.push_back(bowDescriptor);
+				}
 				
-				trainingData.push_back(bowDescriptor);
-				labels.push_back((float)count);
+				
+				
 			}
-
-
+		}
+		if (aux == 1)
+		{
+			cout << count << endl;
+			count ++;
+			aux = 0;
 		}
 		closedir(dp1);
-		// count ++;
+		
 	}  
-    
-	cout << "count: " << count << endl;
-	cout << "a: " << a << endl;
 
+	closedir( dp );
+
+    
+	// cout << "count: " << count << endl;
+	// cout << "a: " << a << endl;
+	cout << "train data: " <<  bowDescriptor.rows << " " << bowDescriptor.cols << endl;
+	cout << "train data: " <<  trainingData.rows << " " << trainingData.cols << endl;
+	cout << "labels data: " << labels.rows << " " << labels.cols << endl;
+	
  	//Setting up SVM parameters
 	CvSVMParams params;
-	params.kernel_type=CvSVM::RBF;
-	params.svm_type=CvSVM::C_SVC;
-	params.gamma=0.50625000000000009;
-	params.C=312.50000000000000;
-	params.term_crit=cvTermCriteria(CV_TERMCRIT_ITER,100,0.000001);
+	params.kernel_type = CvSVM::RBF;
+	params.svm_type = CvSVM::C_SVC;
+	params.gamma = 0.50625000000000009;
+	params.C = 312.50000000000000;
+	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER,100,0.000001);
 	CvSVM svm;
 
 
 	printf("%s\n","Training SVM classifier");
 
-	// bool res = svm.train(trainingData, labels, cv::Mat(), cv::Mat(), params);
+	bool res = svm.train(trainingData, labels, cv::Mat(), cv::Mat(), params);
 
-	// cout<<"Processing evaluation data..."<<endl;
+	cout << "Processing evaluation data..." << endl;
 
-	// Mat groundTruth(0, 1, CV_32FC1);
-	// Mat evalData(0, dictionarySize, CV_32FC1);
-	// vector<KeyPoint> keypoints2;
-	// Mat bowDescriptor2;
+	Mat groundTruth(0, 1, CV_32FC1);
+	Mat evalData(0, dictionarySize, CV_32FC1);
+	vector<KeyPoint> keypoints2;
+	Mat bowDescriptor2;
 
-	// Mat results(0, 1, CV_32FC1);
-	// Mat img2;
+	Mat results(0, 1, CV_32FC1);
+	Mat img2;
 
- //    while (dirp = readdir( dp ))
-	// {
-	// 	filepath = dir + dirp->d_name;
-	// 	// cout << filepath << endl;
+	count = 0;
+	dir = "test/";
+	aux = 0;
 
-	// 	dp1 = opendir( filepath.c_str() );
+	dp = opendir( dir.c_str() );
+    while (dirp = readdir( dp ))
+	{
+		filepath = dir + dirp->d_name;
+		// cout << filepath << endl;
 
-	// 	while (dirp1 = readdir( dp1 ))
-	// 	{
-	// 		if (dirp1->d_type != isFile) continue;
+		dp1 = opendir( filepath.c_str() );
 
-	// 		filepath = dir + dirp->d_name;
-	// 		// cout << filepath << endl;
-	// 		imgpath = filepath + "/"+dirp1->d_name;
-	// 		// cout << "img: " << imgpath << endl;
+		while (dirp1 = readdir( dp1 ))
+		{
+			if (dirp1->d_type != isFile) continue;
 
-	// 		img = imread(imgpath);
-	// 		if(img.data )                              // Check for invalid input
-	// 		{
-				
-	// 			// cout << "label: " << dirp->d_name << endl;
-	// 		    img2 = imread(imgpath);
-	// 		    detector.detect(img2,keypoints2);
-	// 			bowide.compute(img2,keypoints2,bowDescriptor2);
-				
-	// 			evalData.push_back(bowDescriptor2);
-	// 			groundTruth.push_back((float) count);
-	// 			float response = svm.predict(bowDescriptor2);
-	// 			results.push_back(response);
-	// 		}
+			filepath = dir + dirp->d_name;
+			cout << filepath << endl;
+			imgpath = filepath + "/"+dirp1->d_name;
+			cout << "img: " << imgpath << endl;
+
+			img2 = imread(imgpath);
+			if(img2.data )                              // Check for invalid input
+			{
+				// cout << "label: " << dirp->d_name << endl;
+			    detector.detect(img2, keypoints2);
+				bowide.compute(img2, keypoints2, bowDescriptor2);
+				// if(!bowDescriptor2.empty()){
+				cout << "galo" << endl;
+
+					evalData.push_back(bowDescriptor2);
+					groundTruth.push_back((float) count);
+					float response = svm.predict(bowDescriptor2);
+					results.push_back(response);
+				// }
+			}
 			    
 
-	// 	}
-	// 	closedir(dp1);
-	// 	count ++;
-	// } 
+		}
+		if (aux == 1)
+		{
+			cout << count << endl;
+			count ++;
+			aux = 0;
+		}
+		closedir(dp1);
+	} 
 
-	// double errorRate = (double) countNonZero(groundTruth- results) / evalData.rows;
-	// printf("%s%f","Error rate is ",errorRate);
+	closedir( dp );
+
+	cout << " evalData.rows: " <<  evalData.rows << endl;
+
+	cout << "(double) countNonZero(groundTruth - results): " << (double) countNonZero(groundTruth - results) << endl;
+
+	double errorRate = (double) countNonZero(groundTruth - results) / evalData.rows;
+	printf("%s%f","Error rate is ",errorRate);
+	cout << endl;
 
 }
 
 return 0;
 }
 
-
-
-//the image file with the location. change it according to your image file location
-    // sprintf(filename,"river08.tif");        
-    
-    // //read the image
-    // Mat img = imread(filename,CV_LOAD_IMAGE_GRAYSCALE);        
-    // //To store the keypoints that will be extracted by SIFT
-    // vector<KeyPoint> keypoints;        
-    // //Detect SIFT keypoints (or feature points)
-    // detector->detect(img,keypoints);
-    // //To store the BoW (or BoF) representation of the image
-    // Mat bowDescriptor;        
-    // //extract BoW (or BoF) descriptor from given image
-    // bowide.compute(img,keypoints,bowDescriptor);
- 
-    // //prepare the yml (some what similar to xml) file
-    // sprintf(imageTag,"img1");            
-    // //write the new BoF descriptor to the file
-    // fs1 << imageTag << bowDescriptor;        
- 
-    // //You may use this descriptor for classifying the image.
-            
-    // //release the file storage
-    // fs1.release();
