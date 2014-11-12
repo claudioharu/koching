@@ -25,8 +25,51 @@ int main(int argc, char* argv[])
 	Mat dictionary;
 	//Construct BOWKMeansTrainer
 	//the number of bags
-	int dictionarySize = 150;
+	int dictionarySize = 200;
 
+
+	char buf[255];
+	ifstream ifs("train/paths.txt");
+	
+	string trainPaths[22];
+	string testPaths[22];
+	
+	short j = 0;
+	while(!ifs.eof())
+	{
+		ifs.getline(buf, 255);
+		string line(buf);
+		if (line.compare("") != 0)
+		{
+			line = line + "/";
+			// istringstream iss(line);
+			trainPaths[j] = line;
+			j++;
+			cout << line << endl;
+		}
+
+	}
+	ifs.close();
+
+	ifs.open("test/paths.txt");
+	j = 0;
+	while(!ifs.eof())
+	{
+		ifs.getline(buf, 255);
+		string line(buf);
+		if (line.compare("") != 0)
+		{
+			line = line + "/";
+			// istringstream iss(line);
+			testPaths[j] = line;
+			j++;
+			cout << line << endl;
+		}
+
+	}
+	ifs.close();
+	
+	
 
 if (flag == 1)
 {
@@ -266,17 +309,15 @@ else
 				// cout << "label: " << dirp->d_name << endl;
 			    detector.detect(img2, keypoints2);
 				bowide.compute(img2, keypoints2, bowDescriptor2);
-				// if(!bowDescriptor2.empty()){
-				cout << "galo" << endl;
+				if(!bowDescriptor2.empty()){
+					cout << "galo" << endl;
 
 					evalData.push_back(bowDescriptor2);
 					groundTruth.push_back((float) count);
 					float response = svm.predict(bowDescriptor2);
 					results.push_back(response);
-				// }
+				}
 			}
-			    
-
 		}
 		if (aux == 1)
 		{
