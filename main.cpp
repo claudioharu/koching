@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	Mat dictionary;
 	//Construct BOWKMeansTrainer
 	//the number of bags
-	int dictionarySize = 200;
+	int dictionarySize = 180;
 
 	char buf[255];
 	ifstream ifs("trainpaths.txt");
@@ -101,9 +101,12 @@ if (flag == 1)
 	cout << "extract descriptors.."<<endl;
 	int count = 0;
 
-	while (dirp = readdir( dp ))
+	// while (dirp = readdir( dp ))
+	// {
+	for(int i = 0; i < 21; i++)
 	{
-		filepath = dir + dirp->d_name;
+		filepath = trainPaths[i];
+		// filepath = dir + dirp->d_name;
 		cout << filepath << endl;
 
 		dp1 = opendir( filepath.c_str() );
@@ -111,10 +114,10 @@ if (flag == 1)
 		while (dirp1 = readdir( dp1 ))
 		{
 
-			filepath = dir + dirp->d_name;
+			// filepath = dir + dirp->d_name;
 			cout << filepath << endl;
 
-			imgpath = filepath + "/"+dirp1->d_name;
+			imgpath = filepath+dirp1->d_name;
 			if (dirp1->d_type != isFile) continue;
 			
 			cout << imgpath << endl;
@@ -124,8 +127,6 @@ if (flag == 1)
 			extractor->compute(img, keypoints, descriptors);
 			
 			training_descriptors.push_back(descriptors);
-
-
 
 		}
 		closedir(dp1);
@@ -137,7 +138,7 @@ if (flag == 1)
 
 	cout << "Total descriptors: " << training_descriptors.rows << endl;
 
-	BOWKMeansTrainer bowtrainer(200); //num clusters
+	BOWKMeansTrainer bowtrainer(180); //num clusters
 	bowtrainer.add(training_descriptors);
 	cout << "cluster BOW features" << endl;
 	dictionary = bowtrainer.cluster();
@@ -205,9 +206,9 @@ else
 			if (dirp1->d_type != isFile) continue;
 
 			// filepath = dir + dirp->d_name;
-			// cout << filepath << endl;
-			imgpath = filepath + "/" +dirp1->d_name;
-			// cout << "img: " << imgpath << endl;
+			cout << filepath << endl;
+			imgpath = filepath  +dirp1->d_name;
+			cout << "img: " << imgpath << endl;
 
 			img = imread(imgpath);
 			if(img.data )                              // Check for invalid input
