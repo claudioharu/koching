@@ -99,7 +99,6 @@ if (flag == 1)
 	cout << "------- build vocabulary ---------\n";
 
 	cout << "extract descriptors.."<<endl;
-	int count = 0;
 
 	// while (dirp = readdir( dp ))
 	// {
@@ -130,7 +129,6 @@ if (flag == 1)
 
 		}
 		closedir(dp1);
-		count ++;
 	}
 
 	cout << endl;
@@ -191,7 +189,6 @@ else
 	Mat trainingData(0, dictionarySize, CV_32FC1);
 
 	int count = 0;
-	short aux = 0;
  //    while (dirp = readdir( dp ))
 	// {
 	for(int i = 0; i < 21; i++){
@@ -217,7 +214,6 @@ else
 			    detector.detect(img, keypoints);
 				bowide.compute(img, keypoints, bowDescriptor);
 				if(!bowDescriptor.empty() ){
-					aux = 1;
 					labels.push_back((float)i);
 					trainingData.push_back(bowDescriptor);
 				}
@@ -226,12 +222,6 @@ else
 				
 			}
 		}
-		if (aux == 1)
-		{
-			cout << count << endl;
-			count ++;
-			aux = 0;
-		}
 		closedir(dp1);
 		
 	}  
@@ -239,8 +229,6 @@ else
 	// closedir( dp );
 
     
-	// cout << "count: " << count << endl;
-	// cout << "a: " << a << endl;
 	cout << "train data: " <<  bowDescriptor.rows << " " << bowDescriptor.cols << endl;
 	cout << "train data: " <<  trainingData.rows << " " << trainingData.cols << endl;
 	cout << "labels data: " << labels.rows << " " << labels.cols << endl;
@@ -249,8 +237,8 @@ else
 	CvSVMParams params;
 	params.kernel_type = CvSVM::RBF;
 	params.svm_type = CvSVM::C_SVC;
-	params.gamma = 0.50625000000000009;
-	params.C = 312.50000000000000;
+	params.gamma = 0.40425000000000009;
+	params.C = 299.50000000000000;
 	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER,100,0.000001);
 	CvSVM svm;
 
@@ -269,9 +257,7 @@ else
 	Mat results(0, 1, CV_32FC1);
 	Mat img2;
 
-	count = 0;
 	dir = "test/";
-	aux = 0;
 
 	// dp = opendir( dir.c_str() );
  //    while (dirp = readdir( dp ))
@@ -310,12 +296,7 @@ else
 			    
 
 		}
-		if (aux == 1)
-		{
-			cout << count << endl;
-			count ++;
-			aux = 0;
-		}
+
 		closedir(dp1);
 	} 
 
