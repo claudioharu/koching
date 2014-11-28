@@ -1,0 +1,19 @@
+Primeiramente deve-se descompactar o folder tp3. Supondo que o cmake já se encontra instalado, siga os seguintes passos:
+
+	/tp3$ cmake .
+	/tp3$ make
+
+Execução:
+
+Para a executar o classificador, digite o seguinte comando no terminal:
+Para gerar o dicionário digite no terminal:
+	/tp2$ ./koch 1 
+
+Para obter o resultado do treinamento digite no terminal:
+	/tp2$ ./koch 0
+    
+Vale mencionar que as imagens para treinamento devem estar no diretório /train e as imagens para validação devem estar no diretorio /test. Ambos os conjuntos de imagens devem estar separados por classe, igual no conjunto fornecido para a realização do trabalho, visto que o programa utiliza as classes reais de cada imagem para calcular o erro de previsão.
+
+Os rótulos previstos estão armazenados na matriz results ou na variável response.
+
+Os arquivos testpaths.txt e trainpaths.txt auxiliam na leitura das imagens de validação e treinamento. Para o funcionamento correto do programa, por favor não os apague.
